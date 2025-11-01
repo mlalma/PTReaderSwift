@@ -268,6 +268,40 @@ final class Unpickler {
     )
   }
   
+  /// Convenience initializer for FileHandle.
+  convenience init(
+    inputData: Data,
+    encoding: PickledCompatiblityEncoding = .ascii,
+    buffers: AnyIterator<Any>? = nil
+  ) {
+    var position: Int = 0
+  
+    self.init(
+      fileRead: { count in
+        guard position + count <= inputData.count else {
+          return Data()
+        }
+        let returnedData = Data(inputData[position..<(position + count)])
+        position += count
+        return returnedData
+      },
+      fileReadline: {
+        var result = Data()
+        while position < inputData.count {
+          let byte = inputData[position]
+          position += 1
+          result.append(byte)
+          if byte == UInt8(ascii: "\n") {
+            break
+          }
+        }
+        return result
+      },
+      encoding: encoding,
+      buffers: buffers
+    )
+  }
+  
   /// Adds extension to the registry so that it can be called to create objects during unpickling.
   /// - Parameters:
   ///   - code: Code for the object on cache.

@@ -71,8 +71,6 @@ class PTFile {
     self.version = parsedVersion
     self.storageAlignment = parsedStorageAlignment
     self.format = parsedNumberFormat
-    
-    let pickleFile = "archive/data.pkl"
   }
   
   private func loadTensor(dType: DType, numberOfElements: Int64, key: String, location: String) {
@@ -80,8 +78,8 @@ class PTFile {
   }
   
   private func parseData(_ data: Data) {
-    let encoding = String.Encoding.utf8
-    
-    // TO_DO: Code this
+    let unpickler = Unpickler(inputData: data)
+    let object = try? unpickler.load()
+    debugPrint("Unpickled this object \(object ?? "NO OBJECT")")
   }
 }

@@ -13,5 +13,4 @@ enum TestError: Error {
   }
   
   let _ = try PTFile(fileName: url)
-  
 }
