@@ -57,6 +57,7 @@ final class Unframer {
         buffer = readFromResource(size)
         return size
       }
+      
       if n < buffer.count {
         throw UnpicklingError.frameExhausted
       }
