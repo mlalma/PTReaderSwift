@@ -6,6 +6,7 @@ final class InstanceFactory {
   init() {
     addInstantiator(TensorInstantiator())
     addInstantiator(UntypedStorageInstantiator())
+    addInstantiator(DictInstantiator())
   }
   
   private func addInstantiator(_ instantiator: Instantiator) {

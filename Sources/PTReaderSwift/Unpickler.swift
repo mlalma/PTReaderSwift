@@ -27,6 +27,7 @@ final class Unpickler {
   private var metastack: [[UnpicklerValue]] = []
   private var memo: [Int: UnpicklerValue] = [:]
   private var invertedRegistry: [Int: (String, String)] = [:]
+  private var deserializedObject: [String: Data] = [:]
   
   /// Protocol version of the unpickled stream
   private var proto: Int = 0
@@ -206,33 +207,39 @@ final class Unpickler {
   /// Handle persistent load, which reads the data for tensor objects.
   /// - Parameter pid: Array of parameters that need to be unpacked.
   /// - Returns: Generated tensor object (MLXArray).
-  func persistentLoad(_ pid: Any) throws -> UnpicklerValue {
-    guard let savedId = pid as? [Any], savedId.count > 0 else {
+  func persistentLoad(_ savedId: [UnpicklerValue]) throws -> UnpicklerValue {
+    guard savedId.count > 0 else {
       throw UnpicklerError.unsupportedPersistentId
     }
-    
+            
     var typeName: String?
-    if let value = savedId.first as? UnpicklerValue {
-      if case .string(let str) = value {
-        typeName = str
-      } else if case .bytes(let byteStr) = value {
-        typeName = String(bytes: byteStr, encoding: .ascii)
-      }
+    if case .string(let value) = savedId.first {
+        typeName = value
+    } else if case .bytes(let byteStr) = savedId.first {
+      typeName = String(bytes: byteStr, encoding: .ascii)
     }
+    
     guard let typeName else { throw UnpicklerError.unsupportedPersistentId }
     
-    let data = savedId.dropFirst()
+    let data = Array(savedId.dropFirst())
+    var storage = Data()
     
     if typeName == Constants.storageTypeName {
-      let storageType = data.count > 0 ? data[0] : nil
-      let rootKey = data.count > 1 ? data[1] : nil
-      let numElements = data.count > 3 ? data[3] : nil
-      let viewMetadata = data.count > 4 ? data[4] : nil
-
-      // TO_DO: Continue here to figure out numOfBytes based on storageType and numElements
+      let storageType = data.count > 0 ? data[0].toAny() as? (Any, String) : nil
+      let rootKey = data.count > 1 ? data[1].toAny() as? String : nil
+      let numElements = data.count > 3 ? data[3].toAny() as? Int : nil
+      let viewMetadata = data.count > 4 ? data[4].toAny() as? String : nil
+            
+      if let rootKey {
+        if let cachedStorage = deserializedObject[rootKey] {
+          storage = cachedStorage
+        } else {
+          deserializedObject[rootKey] = storage
+        }
+      }            
     }
     
-    return .none
+    return .object((storage, "Data"))
   }
     
   /// Finds the correct class and to instantiate based on Python module and Python class.
@@ -385,15 +392,16 @@ final class Unpickler {
     guard let pidString = String(data: line.dropLast(), encoding: .ascii) else {
       throw UnpicklerError.error("persistent IDs in protocol 0 must be ASCII strings")
     }
-    let value = try persistentLoad(pidString)
+    let value = try persistentLoad([.string(pidString)])
     append(value)
   }
     
   /// Loads persistent data such as tensor data.
   private func loadBinpersid() throws {
-    let pid = stack.removeLast()
-    let value = try persistentLoad(pid.toAny())
-    append(value)
+    if let pid = stack.removeLast().toAny() as? [UnpicklerValue] {
+      let value = try persistentLoad(pid)
+      append(value)
+    }
   }
     
   /// Adds nil value to stack.
@@ -953,10 +961,10 @@ final class Unpickler {
     let args = stack.removeLast()
     let funcName = stack.removeLast()
     
-    debugPrint("loadReduce() is not right now supported! Should call function \(funcName) with args \(args)")
+    debugPrint("loadReduce() is not right now supported! Should call function/constructor \(funcName) with args \(args)")
     
-    // For now, just push a placeholder to the app
-    append(args)
+    // For now, just push funcName back
+    append(funcName)
   }
     
   /// Creates instance of new object and pushes it to the stack.

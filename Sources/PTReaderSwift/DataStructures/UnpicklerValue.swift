@@ -25,9 +25,9 @@ enum UnpicklerValue {
       case .float(let value): return value
       case .string(let value): return value
       case .bytes(let value): return value
-      case .list(let value): return value.map { $0.toAny() }
-      case .dict(let value): return value.mapValues { $0.toAny() }
-      case .tuple(let value): return value.map { $0.toAny() }
+      case .list(let value): return value
+      case .dict(let value): return value
+      case .tuple(let value): return value
       case .set(let value): return value
       // Should not appear in final output
       case .mark: return "MARK"
