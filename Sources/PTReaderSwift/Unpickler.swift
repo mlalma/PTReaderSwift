@@ -43,6 +43,8 @@ final class Unpickler {
     static let highestSupportedProtocolVersion = 5
     /// End-of-line marker when unpickling strings
     static let endOfLineMarker = UInt8(ascii: "\n")
+    /// Persistent loader type
+    static let storageTypeName = "storage"
   }
   
   /// Cosntructor.
@@ -135,18 +137,20 @@ final class Unpickler {
       return returnValue
     }
     
+    // Reset the state when exiting the function and make sure that
+    // unpickler goes to read-only state
+    defer {
+      stack = []
+      metastack = []
+      proto = 0
+      stopReading = true
+    }
+    
     // Initialize the unframer
     unframer = Unframer(
         readFromResource: fileRead,
         readLineFromResource: fileReadline
     )
-    
-    // Start from resetting thestate
-    stack = []
-    metastack = []
-    proto = 0
-    stopReading = false
-    returnValue = nil
     
     // Main dispatch loop
     while !stopReading {
@@ -203,8 +207,32 @@ final class Unpickler {
   /// - Parameter pid: Array of parameters that need to be unpacked.
   /// - Returns: Generated tensor object (MLXArray).
   func persistentLoad(_ pid: Any) throws -> UnpicklerValue {
-    // TODO: Implement this one
-    throw UnpicklerError.unsupportedPersistentId
+    guard let savedId = pid as? [Any], savedId.count > 0 else {
+      throw UnpicklerError.unsupportedPersistentId
+    }
+    
+    var typeName: String?
+    if let value = savedId.first as? UnpicklerValue {
+      if case .string(let str) = value {
+        typeName = str
+      } else if case .bytes(let byteStr) = value {
+        typeName = String(bytes: byteStr, encoding: .ascii)
+      }
+    }
+    guard let typeName else { throw UnpicklerError.unsupportedPersistentId }
+    
+    let data = savedId.dropFirst()
+    
+    if typeName == Constants.storageTypeName {
+      let storageType = data.count > 0 ? data[0] : nil
+      let rootKey = data.count > 1 ? data[1] : nil
+      let numElements = data.count > 3 ? data[3] : nil
+      let viewMetadata = data.count > 4 ? data[4] : nil
+
+      // TO_DO: Continue here to figure out numOfBytes based on storageType and numElements
+    }
+    
+    return .none
   }
     
   /// Finds the correct class and to instantiate based on Python module and Python class.
