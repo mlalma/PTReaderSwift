@@ -1,20 +1,5 @@
 import Foundation
 
-// Error type for unpickling errors.
-enum UnpicklingError: Error {    
-  case frameExhausted
-  case unexpectedFrameState
-  case error(String)
-  case eof
-  case unsupportedProtocol(Int)
-  case unsupportedPersistentId
-  case negativeByteCount
-  case exceedsMaxSize
-  case memoNotFound(Int)
-  case negativeArgument
-  case unregisteredExtension(Int)
-}
-
 /// Handles frame-based reading from pickle files.
 final class Unframer {
   private let readFromResource: (Int) -> Data
@@ -59,7 +44,7 @@ final class Unframer {
       }
       
       if n < buffer.count {
-        throw UnpicklingError.frameExhausted
+        throw UnpicklerError.frameExhausted
       }
       return n
     } else {
@@ -82,7 +67,7 @@ final class Unframer {
       }
 
       if data.count < n {
-        throw UnpicklingError.frameExhausted
+        throw UnpicklerError.frameExhausted
       }
       return data
     } else {
@@ -102,7 +87,7 @@ final class Unframer {
       }
 
       if data.last != UInt8(ascii: "\n") {
-        throw UnpicklingError.frameExhausted
+        throw UnpicklerError.frameExhausted
       }
       return data
     } else {
@@ -116,7 +101,7 @@ final class Unframer {
   func loadFrame(frameSize: Int) throws {
     if let frame = currentFrame {
       if !frame.endOfData {
-          throw UnpicklingError.unexpectedFrameState
+          throw UnpicklerError.unexpectedFrameState
       }
     }
     let frameData = readFromResource(frameSize)

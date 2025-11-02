@@ -1,194 +1,5 @@
 import Foundation
 
-/// Supported pickle opcodes.
-struct PickleOpcode {
-  /// Opcodes for protocol versions 0 and 1.
-
-  /// Push special markobject on stack
-  static let mark: UInt8 = 0x28
-  /// Every pickle stream ends with STOP
-  static let stop: UInt8 = 0x2e
-  /// Discard topmost stack item
-  static let pop: UInt8 = 0x30
-  /// Discard stack top through topmost markobject
-  static let popMark: UInt8 = 0x31
-  /// Duplicate top stack item
-  static let dup: UInt8 = 0x32
-  /// Push float object
-  static let float: UInt8 = 0x46
-  /// Push integer or bool
-  static let int: UInt8 = 0x49
-  /// Push four-byte signed int
-  static let binInt: UInt8 = 0x4a
-  /// Push 1-byte unsigned int
-  static let binInt1: UInt8 = 0x4b
-  /// Push long
-  static let long: UInt8 = 0x4c
-  /// Push 2-byte unsigned int
-  static let binInt2: UInt8 = 0x4d
-  /// Push None
-  static let none: UInt8 = 0x4e
-  /// Push persistent object
-  static let persId: UInt8 = 0x50
-  /// Push persistent object
-  static let binPersId: UInt8 = 0x51
-  /// Apply callable to argtuple
-  static let reduce: UInt8 = 0x52
-  /// Push string
-  static let string: UInt8 = 0x53
-  /// Push string
-  static let binString: UInt8 = 0x54
-  /// Push string (< 256 bytes)
-  static let shortBinString: UInt8 = 0x55
-  /// Push Unicode string
-  static let unicode: UInt8 = 0x56
-  /// Push Unicode string
-  static let binUnicode: UInt8 = 0x58
-  /// Append stack top to list
-  static let append: UInt8 = 0x61
-  /// Restores the object's state
-  static let build: UInt8 = 0x62
-  /// Finds and creates an object
-  static let global: UInt8 = 0x63
-  /// Build a dictionary from stack items
-  static let dict: UInt8 = 0x64
-  /// Push empty dictionaty
-  static let emptyDict: UInt8 = 0x7d
-  /// Extend list on stack
-  static let appends: UInt8 = 0x65
-  /// Push item from memo on stack
-  static let get: UInt8 = 0x67
-  /// Push item from memo on stack
-  static let binGet: UInt8 = 0x68
-  /// Build & push class instance
-  static let inst: UInt8 = 0x69
-  /// Push item from memo on stack
-  static let longBinGet: UInt8 = 0x6a
-  /// Build list from topmost stack items
-  static let list: UInt8 = 0x6c
-  /// Push empty list
-  static let emptyList: UInt8 = 0x5d
-  /// Build & push class instance
-  static let obj: UInt8 = 0x6f
-  /// Store stack top in memo
-  static let put: UInt8 = 0x70
-  /// Store stack top in memo
-  static let binPut: UInt8 = 0x71
-  /// Store stack top in memo
-  static let longBinPut: UInt8 = 0x72
-  /// Add key+value pair to dict
-  static let dictItem: UInt8 = 0x73
-  /// Build tuple from topmost stack items
-  static let tuple: UInt8 = 0x74
-  /// Push empty tuple
-  static let emptyTuple: UInt8 = 0x29
-  /// Modify dict by adding topmost key+value pairs
-  static let dictItems: UInt8 = 0x75
-  /// Push float
-  static let binFloat: UInt8 = 0x47
-  
-  /// Extra Opcodes for protocol version 2.
-
-  /// Identify pickle protocol
-  static let proto: UInt8 = 0x80
-  /// Build object by applying cls.__new__ to argtuple
-  static let newObj: UInt8  = 0x81
-  /// push object from extension registry; 1-byte index
-  static let ext1: UInt8 = 0x82
-  /// Ditto, but 2-byte index
-  static let ext2: UInt8 = 0x83
-  /// Ditto, but 4-byte index
-  static let ext4: UInt8 = 0x84
-  /// Build 1-tuple from stack top
-  static let tuple1: UInt8 = 0x85
-  /// Build 2-tuple from two topmost stack items
-  static let tuple2: UInt8 = 0x86
-  /// Build 3-tuple from three topmost stack items
-  static let tuple3: UInt8 = 0x87
-  /// Push True
-  static let newTrue: UInt8 = 0x88
-  /// Push False
-  static let newFalse: UInt8  = 0x89
-  /// Push long from < 256 bytes
-  static let long1: UInt8 = 0x8a
-  /// Push really big long
-  static let long4: UInt8 = 0x8b
-  
-  /// Extra opcodes for protocol version 3.
-
-  /// Push bytes
-  static let binBytes: UInt8 = 0x42
-  /// Push bytes (< 256 bytes)
-  static let shortBinBytes: UInt8 = 0x43
-  
-  /// Extra opcodes for protocol version 4.
-
-  /// Push short string; UTF-8 length < 256 bytes
-  static let shortBinUnicode: UInt8 = 0x8c
-  /// Push very long string
-  static let binUnicode8: UInt8 = 0x8d
-  /// Push very long bytes string
-  static let binBytes8: UInt8 = 0x8e
-  /// Push empty set on the stack
-  static let emptySet: UInt8 = 0x8f
-  /// Modify set by adding topmost stack items
-  static let setItems: UInt8 = 0x90
-  /// Build (immutable) set from topmost stack items
-  static let frozenSet: UInt8 = 0x91
-  /// Like NEWOBJ but work with keyword only arguments
-  static let newObjEx: UInt8 = 0x92
-  /// Same as GLOBAL but using names on the stacks
-  static let stackGlobal: UInt8 = 0x93
-  /// Store top of the stack in memo
-  static let memoize: UInt8 = 0x94
-  /// Indicate the beginning of a new frame
-  static let frame: UInt8 = 0x95
-  
-  /// Extra opcodes for protocol version 5.
-
-  /// Push bytearray
-  static let byteArray8: UInt8 = 0x96
-  /// Push next out-of-band buffer
-  static let nextBuffer: UInt8 = 0x97
-  /// Make top of stack readonly
-  static let readonlyBuffer: UInt8 = 0x98
-}
-
-/// Represents different types that can be stored to stack during unpickling.
-enum UnpicklerValue {
-  case none
-  case bool(Bool)
-  case int(Int)
-  case float(Double)
-  case string(String)
-  case bytes(Data)
-  case list([UnpicklerValue])
-  case dict([AnyHashable: UnpicklerValue])
-  case tuple([UnpicklerValue])
-  case set(Set<AnyHashable>)
-  case mark
-  case any(Any)
-  
-  /// Convert to Any for final output
-  func toAny() -> Any {
-    switch self {
-      case .none: return NSNull()
-      case .bool(let v): return v
-      case .int(let v): return v
-      case .float(let v): return v
-      case .string(let v): return v
-      case .bytes(let v): return v
-      case .list(let v): return v.map { $0.toAny() }
-      case .dict(let v): return v.mapValues { $0.toAny() }
-      case .tuple(let v): return v.map { $0.toAny() }
-      case .set(let v): return v
-      // Should not appear in final output
-      case .mark: return "MARK"
-      case .any(let v): return v
-    }
-  }
-}
-
 /// Swift port of Python's Unpickler class for reading pickle files.
 /// Pickle is Python’s built-in, Python-specific binary serialization format to turn Python objecs into a byte stream and back.
 /// This class is not focused on full compatibilty, but the required subset for loading PyTorch's .pt files that use pickle to store data.
@@ -207,6 +18,8 @@ final class Unpickler {
   private let fileReadline: () -> Data
   /// Encoding settings
   private let encoding: PickledCompatiblityEncoding
+  /// Class instance instantiator
+  private let instanceFactory = InstanceFactory()
 
   /// Unpickler state
   private var unframer: Unframer!
@@ -228,6 +41,8 @@ final class Unpickler {
   private struct Constants {
     /// Highest supported protocol
     static let highestSupportedProtocolVersion = 5
+    /// End-of-line marker when unpickling strings
+    static let endOfLineMarker = UInt8(ascii: "\n")
   }
   
   /// Cosntructor.
@@ -268,7 +83,7 @@ final class Unpickler {
     )
   }
   
-  /// Convenience initializer for FileHandle.
+  /// Convenience initializer for Data.
   convenience init(
     inputData: Data,
     encoding: PickledCompatiblityEncoding = .ascii,
@@ -286,16 +101,16 @@ final class Unpickler {
         return returnedData
       },
       fileReadline: {
-        var result = Data()
-        while position < inputData.count {
-          let byte = inputData[position]
-          position += 1
-          result.append(byte)
-          if byte == UInt8(ascii: "\n") {
-            break
+        var newPosition = position
+        let returnedData = inputData.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) in
+          while newPosition < inputData.count && buffer[newPosition] != Constants.endOfLineMarker {
+            newPosition += 1
           }
+          newPosition += newPosition < inputData.count ? 1 : 0
+          return Data(inputData[position..<newPosition])
         }
-        return result
+        position = newPosition
+        return returnedData
       },
       encoding: encoding,
       buffers: buffers
@@ -337,7 +152,7 @@ final class Unpickler {
     while !stopReading {
       let key = try read(1)
       if key.isEmpty {
-        throw UnpicklingError.eof
+        throw UnpicklerError.eof
       }
       
       let opcode = key[0]
@@ -389,7 +204,7 @@ final class Unpickler {
   /// - Returns: Generated tensor object (MLXArray).
   func persistentLoad(_ pid: Any) throws -> UnpicklerValue {
     // TODO: Implement this one
-    throw UnpicklingError.unsupportedPersistentId
+    throw UnpicklerError.unsupportedPersistentId
   }
     
   /// Finds the correct class and to instantiate based on Python module and Python class.
@@ -398,10 +213,12 @@ final class Unpickler {
   ///   - name: Python class name.
   /// - Returns: Class to return.
   func findClass(module: String, name: String) throws -> UnpicklerValue {
-    // TODO: Create class as needed, this is the key to create the matching classes
+    guard let instantiatedClass = instanceFactory.createInstance(module: module, className: name) else {
+      debugPrint("Could not create a new instance of class from module \(module) with class name \(name)")
+      throw UnpicklerError.classCouldNotBeInstantiated
+    }
     
-    debugPrint("Should create a new instance of class from module \(module) with class name \(name)")
-    return .dict(["__module__": .string(module), "__name__": .string(name)])
+    return instantiatedClass
   }
   
   /// Dispatch an opcode to its handler. Very core of the VM to perform the ops to restore the object graph.
@@ -511,7 +328,7 @@ final class Unpickler {
       case PickleOpcode.stop: try loadStop()
         
       default:
-        throw UnpicklingError.error("Unknown opcode: \(opcode)")
+        throw UnpicklerError.error("Unknown opcode: \(opcode)")
     }
   }
 
@@ -522,7 +339,7 @@ final class Unpickler {
     let protoData = try read(1)
     let proto = Int(protoData[0])
     if proto < 0 || proto > Constants.highestSupportedProtocolVersion {
-      throw UnpicklingError.unsupportedProtocol(proto)
+      throw UnpicklerError.unsupportedProtocol(proto)
     }
     self.proto = proto
   }
@@ -538,7 +355,7 @@ final class Unpickler {
   private func loadPersid() throws {
     let line = try readline()
     guard let pidString = String(data: line.dropLast(), encoding: .ascii) else {
-      throw UnpicklingError.error("persistent IDs in protocol 0 must be ASCII strings")
+      throw UnpicklerError.error("persistent IDs in protocol 0 must be ASCII strings")
     }
     let value = try persistentLoad(pidString)
     append(value)
@@ -579,7 +396,7 @@ final class Unpickler {
     } else {
       guard let str = String(data: line, encoding: .ascii),
             let val = Int(str, radix: 10) else {
-        throw UnpicklingError.error("Invalid integer format")
+        throw UnpicklerError.error("Invalid integer format")
       }
       append(.int(val))
     }
@@ -617,7 +434,7 @@ final class Unpickler {
       
     guard let str = String(data: line, encoding: .ascii),
           let val = Int(str, radix: 10) else {
-      throw UnpicklingError.error("Invalid long format")
+      throw UnpicklerError.error("Invalid long format")
     }
     append(.int(val))
   }
@@ -637,7 +454,7 @@ final class Unpickler {
     let n = lenData.withUnsafeBytes { $0.load(as: Int32.self) }
     
     if n < 0 {
-      throw UnpicklingError.negativeByteCount
+      throw UnpicklerError.negativeByteCount
     }
     
     let data = try read(Int(n))
@@ -652,7 +469,7 @@ final class Unpickler {
     
     guard let str = String(data: line, encoding: .ascii),
           let val = Double(str) else {
-      throw UnpicklingError.error("Invalid float format")
+      throw UnpicklerError.error("Invalid float format")
     }
     append(.float(val))
   }
@@ -676,7 +493,7 @@ final class Unpickler {
     } else {
       let enc = encoding == .ascii ? String.Encoding.ascii : .utf8
         guard let str = String(data: value, encoding: enc) else {
-          throw UnpicklingError.error("Failed to decode string")
+          throw UnpicklerError.error("Failed to decode string")
         }
         return str
     }
@@ -691,7 +508,7 @@ final class Unpickler {
     if data.count >= 2 && data.first == data.last && data.first == UInt8(ascii: "'") {
       data = data.dropFirst().dropLast()
     } else {
-      throw UnpicklingError.error("STRING opcode argument must be quoted")
+      throw UnpicklerError.error("STRING opcode argument must be quoted")
     }
     
     let str = try decodeString(data)
@@ -704,7 +521,7 @@ final class Unpickler {
     let len = lenData.withUnsafeBytes { $0.load(as: Int32.self) }
     
     if len < 0 {
-      throw UnpicklingError.negativeByteCount
+      throw UnpicklerError.negativeByteCount
     }
     
     let data = try read(Int(len))
@@ -727,7 +544,7 @@ final class Unpickler {
     let len = lenData.withUnsafeBytes { $0.load(as: UInt32.self) }
     
     if len > Int.max {
-      throw UnpicklingError.exceedsMaxSize
+      throw UnpicklerError.exceedsMaxSize
     }
     
     let data = try read(Int(len))
@@ -748,7 +565,7 @@ final class Unpickler {
     let len = lenData.withUnsafeBytes { $0.load(as: UInt64.self) }
     
     if len > Int.max {
-      throw UnpicklingError.exceedsMaxSize
+      throw UnpicklerError.exceedsMaxSize
     }
     
     let data = try read(Int(len))
@@ -774,7 +591,7 @@ final class Unpickler {
     let line = data.dropLast()
           
     guard let str = decodeRawUnicodeEscape(line) else {
-      throw UnpicklingError.error("Failed to decode unicode")
+      throw UnpicklerError.error("Failed to decode unicode")
     }
     append(.string(str))
   }
@@ -785,7 +602,7 @@ final class Unpickler {
     let len = lenData.withUnsafeBytes { $0.load(as: UInt32.self) }
     
     if len > Int.max {
-      throw UnpicklingError.exceedsMaxSize
+      throw UnpicklerError.exceedsMaxSize
     }
     
     let data = try read(Int(len))
@@ -810,7 +627,7 @@ final class Unpickler {
     let len = lenData.withUnsafeBytes { $0.load(as: UInt64.self) }
     
     if len > Int.max {
-      throw UnpicklingError.exceedsMaxSize
+      throw UnpicklerError.exceedsMaxSize
     }
     
     let data = try read(Int(len))
@@ -902,11 +719,11 @@ final class Unpickler {
       
       guard let str = String(data: line, encoding: .ascii),
             let i = Int(str) else {
-          throw UnpicklingError.error("Invalid GET index")
+          throw UnpicklerError.error("Invalid GET index")
       }
       
       guard let value = memo[i] else {
-          throw UnpicklingError.memoNotFound(i)
+          throw UnpicklerError.memoNotFound(i)
       }
       
       append(value)
@@ -918,7 +735,7 @@ final class Unpickler {
       let i = Int(data[0])
       
       guard let value = memo[i] else {
-          throw UnpicklingError.memoNotFound(i)
+          throw UnpicklerError.memoNotFound(i)
       }
       
       append(value)
@@ -930,7 +747,7 @@ final class Unpickler {
       let i = data.withUnsafeBytes { $0.load(as: UInt32.self) }
       
       guard let value = memo[Int(i)] else {
-          throw UnpicklingError.memoNotFound(Int(i))
+          throw UnpicklerError.memoNotFound(Int(i))
       }
       
       append(value)
@@ -943,15 +760,15 @@ final class Unpickler {
     
     guard let str = String(data: line, encoding: .ascii),
           let i = Int(str) else {
-      throw UnpicklingError.error("Invalid PUT index")
+      throw UnpicklerError.error("Invalid PUT index")
     }
       
     if i < 0 {
-      throw UnpicklingError.negativeArgument
+      throw UnpicklerError.negativeArgument
     }
     
     guard let lastItem = stack.last else {
-      throw UnpicklingError.error("Nothing in stack to put to memo location \(i)")
+      throw UnpicklerError.error("Nothing in stack to put to memo location \(i)")
     }
       
     memo[i] = lastItem
@@ -963,11 +780,11 @@ final class Unpickler {
     let i = Int(data[0])
     
     if i < 0 {
-        throw UnpicklingError.negativeArgument
+        throw UnpicklerError.negativeArgument
     }
     
     guard let lastItem = stack.last else {
-      throw UnpicklingError.error("Nothing in stack to put to memo location \(i)")
+      throw UnpicklerError.error("Nothing in stack to put to memo location \(i)")
     }
       
     memo[i] = lastItem
@@ -979,11 +796,11 @@ final class Unpickler {
     let i = data.withUnsafeBytes { $0.load(as: UInt32.self) }
     
     if i > Int.max {
-      throw UnpicklingError.negativeArgument
+      throw UnpicklerError.negativeArgument
     }
     
     guard let lastItem = stack.last else {
-      throw UnpicklingError.error("Nothing in stack to put to memo location \(i)")
+      throw UnpicklerError.error("Nothing in stack to put to memo location \(i)")
     }
       
     memo[Int(i)] = lastItem
@@ -994,7 +811,7 @@ final class Unpickler {
     let idx = memo.count
     
     guard let lastItem = stack.last else {
-      throw UnpicklingError.error("Nothing in stack to put to memo location \(idx)")
+      throw UnpicklerError.error("Nothing in stack to put to memo location \(idx)")
     }
     memo[idx] = lastItem
   }
@@ -1006,7 +823,7 @@ final class Unpickler {
       list.append(value)
       append(.list(list))
     } else {
-      throw UnpicklingError.error("Append requires a list")
+      throw UnpicklerError.error("Append requires a list")
     }
   }
   
@@ -1017,7 +834,7 @@ final class Unpickler {
       list.append(contentsOf: items)
       append(.list(list))
     } else {
-      throw UnpicklingError.error("Appends requires a list")
+      throw UnpicklerError.error("Appends requires a list")
     }
   }
   
@@ -1030,7 +847,7 @@ final class Unpickler {
       dict[key.toAny() as! AnyHashable] = value
       append(.dict(dict))
     } else {
-      throw UnpicklingError.error("loadDictItem() requires a dict")
+      throw UnpicklerError.error("loadDictItem() requires a dict")
     }
   }
   
@@ -1048,7 +865,7 @@ final class Unpickler {
       }
       append(.dict(dict))
     } else {
-      throw UnpicklingError.error("loadDictItems() requires a dict")
+      throw UnpicklerError.error("loadDictItems() requires a dict")
     }
   }
   
@@ -1060,7 +877,7 @@ final class Unpickler {
       items.forEach { set.insert($0.toAny() as! AnyHashable) }
       append(.set(set))
     } else {
-      throw UnpicklingError.error("loadSetItems() requires a set")
+      throw UnpicklerError.error("loadSetItems() requires a set")
     }
   }
     
@@ -1096,7 +913,7 @@ final class Unpickler {
   /// Duplicates last item on stack. Does not do deep copy of the item though for sets, dictionaries or lists.
   private func loadDup() throws {
     guard let lastItem = stack.last else {
-      throw UnpicklingError.error("Dup requires at least one item on the stack")
+      throw UnpicklerError.error("Dup requires at least one item on the stack")
     }
     append(lastItem)
   }
@@ -1146,20 +963,17 @@ final class Unpickler {
     
     guard let module = String(data: moduleLine.dropLast(), encoding: .utf8),
           let name = String(data: nameLine.dropLast(), encoding: .utf8) else {
-      throw UnpicklingError.error("Failed to decode global")
+      throw UnpicklerError.error("Failed to decode global")
     }
     
-    debugPrint("loadGlobal() is not right now supported! Should create class \(name)")
-    
-    let klass = try findClass(module: module, name: name)
-    append(klass)
+    append(try findClass(module: module, name: name))
   }
     
   /// Creates instnace of new object and pushes it to the stack.
   private func loadStackGlobal() throws {
     guard case .string(let name) = stack.removeLast(),
           case .string(let module) = stack.removeLast() else {
-      throw UnpicklingError.error("STACK_GLOBAL requires str")
+      throw UnpicklerError.error("STACK_GLOBAL requires str")
     }
     
     let klass = try findClass(module: module, name: name)
@@ -1191,14 +1005,14 @@ final class Unpickler {
   /// - Parameter code: Cache lookup key.
   private func getExtension(code: Int) throws {
     if code <= 0 {
-      throw UnpicklingError.error("EXT specifies code <= 0")
+      throw UnpicklerError.error("EXT specifies code <= 0")
     }
     
     if let (module, className) = invertedRegistry[code] {
       let object = try findClass(module: module, name: className)
       append(.any(object))
     } else {
-      throw UnpicklingError.unregisteredExtension(code)
+      throw UnpicklerError.unregisteredExtension(code)
     }
   }
   
@@ -1209,7 +1023,7 @@ final class Unpickler {
     
     guard let module = String(data: moduleLine.dropLast(), encoding: .ascii),
           let name = String(data: nameLine.dropLast(), encoding: .ascii) else {
-        throw UnpicklingError.error("Failed to decode INST")
+        throw UnpicklerError.error("Failed to decode INST")
     }
     
     let _ = try findClass(module: module, name: name)
@@ -1238,7 +1052,7 @@ final class Unpickler {
     let len = lenData.withUnsafeBytes { $0.load(as: UInt64.self) }
     
     if len > Int.max {
-        throw UnpicklingError.exceedsMaxSize
+        throw UnpicklerError.exceedsMaxSize
     }
     
     var buffer = Data(count: Int(len))
@@ -1249,11 +1063,11 @@ final class Unpickler {
   /// Loads next value from a given buffer to stack.
   private func loadNextBuffer() throws {
     guard let buffers = buffers else {
-      throw UnpicklingError.error("pickle stream refers to out-of-band data but no buffers argument was given")
+      throw UnpicklerError.error("pickle stream refers to out-of-band data but no buffers argument was given")
     }
     
     guard let buf = buffers.next() else {
-      throw UnpicklingError.error("not enough out-of-band buffers")
+      throw UnpicklerError.error("not enough out-of-band buffers")
     }
     
     append(.any(buf))
