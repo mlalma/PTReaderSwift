@@ -9,6 +9,10 @@ final class UntypedStorageInstantiator: Instantiator {
   
   func initializeInstance(object: UnpicklerValue, arguments: Any) {
   }
+  
+  var unpickledTypeNames: [String] {
+    ["IntStorage"]
+  }
     
   var recognizedClassNames: [String] {
     Constants.classNames

@@ -1,4 +1,5 @@
 import Foundation
+import MLX
 
 /// Swift port of Python's Unpickler class for reading pickle files.
 /// Pickle is Python’s built-in, Python-specific binary serialization format to turn Python objecs into a byte stream and back.
@@ -21,13 +22,15 @@ final class Unpickler {
   /// Class instance instantiator
   private let instanceFactory = InstanceFactory()
 
+  private let tensorLoader: TensorDataLoader
+
   /// Unpickler state
   private var unframer: Unframer!
   private var stack: [UnpicklerValue] = []
   private var metastack: [[UnpicklerValue]] = []
   private var memo: [Int: UnpicklerValue] = [:]
   private var invertedRegistry: [Int: (String, String)] = [:]
-  private var deserializedObject: [String: Data] = [:]
+  private var storageCache: [String: (Data, String)] = [:]
   
   /// Protocol version of the unpickled stream
   private var proto: Int = 0
@@ -52,18 +55,19 @@ final class Unpickler {
   /// - Parameters:
   ///   - fileRead: Closure that reads n bytes
   ///   - fileReadline: Closure that reads a line
-  ///   - fixImports: Whether to fix Python 2/3 compatibility
+  ///   - tensorLoader: Funcationality to read tensor data
   ///   - encoding: Encoding for string objects
-  ///   - errors: Error handling mode
   ///   - buffers: Iterator for out-of-band buffers (protocol 5)
   init(
     fileRead: @escaping (Int) -> Data,
     fileReadline: @escaping () -> Data,
+    tensorLoader: TensorDataLoader,
     encoding: PickledCompatiblityEncoding = .ascii,
     buffers: AnyIterator<Any>? = nil
   ) {
     self.fileRead = fileRead
     self.fileReadline = fileReadline
+    self.tensorLoader = tensorLoader
     self.encoding = encoding
     self.buffers = buffers
   }
@@ -71,6 +75,7 @@ final class Unpickler {
   /// Convenience initializer for FileHandle.
   convenience init(
     fileHandle: FileHandle,
+    tensorLoader: TensorDataLoader,
     encoding: PickledCompatiblityEncoding = .ascii,
     buffers: AnyIterator<Any>? = nil
   ) {
@@ -81,6 +86,7 @@ final class Unpickler {
       fileReadline: {
         fileHandle.readLine()
       },
+      tensorLoader: tensorLoader,
       encoding: encoding,
       buffers: buffers
     )
@@ -89,6 +95,7 @@ final class Unpickler {
   /// Convenience initializer for Data.
   convenience init(
     inputData: Data,
+    tensorLoader: TensorDataLoader,
     encoding: PickledCompatiblityEncoding = .ascii,
     buffers: AnyIterator<Any>? = nil
   ) {
@@ -115,6 +122,7 @@ final class Unpickler {
         position = newPosition
         return returnedData
       },
+      tensorLoader: tensorLoader,
       encoding: encoding,
       buffers: buffers
     )
@@ -204,42 +212,73 @@ final class Unpickler {
       return items
   }
     
+  private func maybeDecodeAscii(from value: UnpicklerValue) -> String? {
+    if case .string(let str) = value {
+      return str
+    } else if case .bytes(let byteStr) = value {
+      return String(bytes: byteStr, encoding: .ascii)
+    }
+    return nil
+  }
+  
+  private func storagecClassToDtype(_ className: String) -> DType? {
+    switch className {
+      case "DoubleStorage": return .float64
+      case "FloatStorage": return .float32
+      case "HalfStorage": return .float16
+      case "LongStorage": return .int64
+      case "IntStorage": return .int32
+      case "ShortStorage": return .int16
+      case "CharStorage": return .int8
+      case "ByteStorage": return .uint8
+      case "BoolStorage": return .bool
+      case "BFloat16Storage": return .bfloat16
+      case "ComplexDoubleStorage": return nil
+      case "CompleteFloatStorage": return .complex64
+      case "QUInt8Storage": return nil
+      case "QInt8Storage": return nil
+      case "QInt32Storage": return nil
+      case "QUInt4x2Storage": return nil
+      case "QUInt2x4Storage": return nil
+      default: return nil
+    }
+  }
+  
   /// Handle persistent load, which reads the data for tensor objects.
   /// - Parameter pid: Array of parameters that need to be unpacked.
   /// - Returns: Generated tensor object (MLXArray).
   func persistentLoad(_ savedId: [UnpicklerValue]) throws -> UnpicklerValue {
-    guard savedId.count > 0 else {
+    guard let firstVal = savedId.first,
+          savedId.count >= 5  else {
+      throw UnpicklerError.unsupportedPersistentId
+    }
+          
+    guard let typeName = maybeDecodeAscii(from: firstVal),
+          typeName == Constants.storageTypeName else {
+      throw UnpicklerError.unsupportedPersistentId
+    }
+    
+    // We are doing these checks to verify that input data is valid and that Unpickler can parse it
+    guard let storageObject = savedId[1].toAny() as? (Any, String),
+      let _ = storageObject.0 as? Data,
+      let _ = storagecClassToDtype(storageObject.1),
+      let key = savedId[2].toAny() as? String,
+      let _ = maybeDecodeAscii(from: savedId[3]),
+      let _ = savedId[4].toAny() as? Int else {
       throw UnpicklerError.unsupportedPersistentId
     }
             
-    var typeName: String?
-    if case .string(let value) = savedId.first {
-        typeName = value
-    } else if case .bytes(let byteStr) = savedId.first {
-      typeName = String(bytes: byteStr, encoding: .ascii)
+    if let cachedStorage = storageCache[key] {
+      return .object(cachedStorage)
+    } else {
+      guard let newStorage =
+        try? tensorLoader.load(dataType: storageObject.1,
+                               key: key) else {
+        throw UnpicklerError.unsupportedPersistentId
+      }
+      storageCache[key] = newStorage
+      return .object(newStorage)
     }
-    
-    guard let typeName else { throw UnpicklerError.unsupportedPersistentId }
-    
-    let data = Array(savedId.dropFirst())
-    var storage = Data()
-    
-    if typeName == Constants.storageTypeName {
-      let storageType = data.count > 0 ? data[0].toAny() as? (Any, String) : nil
-      let rootKey = data.count > 1 ? data[1].toAny() as? String : nil
-      let numElements = data.count > 3 ? data[3].toAny() as? Int : nil
-      let viewMetadata = data.count > 4 ? data[4].toAny() as? String : nil
-            
-      if let rootKey {
-        if let cachedStorage = deserializedObject[rootKey] {
-          storage = cachedStorage
-        } else {
-          deserializedObject[rootKey] = storage
-        }
-      }            
-    }
-    
-    return .object((storage, "Data"))
   }
     
   /// Finds the correct class and to instantiate based on Python module and Python class.

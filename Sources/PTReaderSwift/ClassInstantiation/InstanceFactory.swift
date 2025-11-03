@@ -2,6 +2,7 @@ import Foundation
 
 final class InstanceFactory {
   var classNameInstantiators: [String: Instantiator] = [:]
+  var unpickedNameInstantiators: [String: Instantiator] = [:]
   
   init() {
     addInstantiator(TensorInstantiator())
@@ -12,6 +13,10 @@ final class InstanceFactory {
   private func addInstantiator(_ instantiator: Instantiator) {
     for className in instantiator.recognizedClassNames {
       classNameInstantiators[className] = instantiator
+    }
+    
+    for unpickledTypeName in instantiator.unpickledTypeNames {
+      unpickedNameInstantiators[unpickledTypeName] = instantiator
     }
   }
   
