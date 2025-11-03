@@ -1,5 +1,6 @@
 import Foundation
 import MLX
+import MLXUtilsLibrary
 
 /// Swift port of Python's Unpickler class for reading pickle files.
 /// Pickle is Python’s built-in, Python-specific binary serialization format to turn Python objecs into a byte stream and back.
@@ -995,15 +996,14 @@ final class Unpickler {
   
   /// Performs function call with given arguments from the stack and pushes output value to stack.
   private func loadReduce() throws {
-    // TODO: Should perform function with the given arguments, doesn't do anything right now
-    
     let args = stack.removeLast()
-    let funcName = stack.removeLast()
+    let object = stack.removeLast()
     
-    debugPrint("loadReduce() is not right now supported! Should call function/constructor \(funcName) with args \(args)")
+    logPrint("Should call function/constructor \(object) with args \(args)")
+    instanceFactory.initializeInstance(object: object, arguments: args)
     
     // For now, just push funcName back
-    append(funcName)
+    append(object)
   }
     
   /// Creates instance of new object and pushes it to the stack.

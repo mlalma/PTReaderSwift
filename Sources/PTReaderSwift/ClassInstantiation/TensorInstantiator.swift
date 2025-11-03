@@ -8,7 +8,7 @@ final class TensorInstantiator: Instantiator {
     return .object((MLXArray(), Constants.typeName))
   }
   
-  func initializeInstance(object: UnpicklerValue, arguments: Any) {
+  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) {
   }
   
   var recognizedClassNames: [String] {
