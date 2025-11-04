@@ -222,29 +222,6 @@ final class Unpickler {
     return nil
   }
   
-  private func storagecClassToDtype(_ className: String) -> DType? {
-    switch className {
-      case "DoubleStorage": return .float64
-      case "FloatStorage": return .float32
-      case "HalfStorage": return .float16
-      case "LongStorage": return .int64
-      case "IntStorage": return .int32
-      case "ShortStorage": return .int16
-      case "CharStorage": return .int8
-      case "ByteStorage": return .uint8
-      case "BoolStorage": return .bool
-      case "BFloat16Storage": return .bfloat16
-      case "ComplexDoubleStorage": return nil
-      case "CompleteFloatStorage": return .complex64
-      case "QUInt8Storage": return nil
-      case "QInt8Storage": return nil
-      case "QInt32Storage": return nil
-      case "QUInt4x2Storage": return nil
-      case "QUInt2x4Storage": return nil
-      default: return nil
-    }
-  }
-  
   /// Handle persistent load, which reads the data for tensor objects.
   /// - Parameter pid: Array of parameters that need to be unpacked.
   /// - Returns: Generated tensor object (MLXArray).
@@ -260,12 +237,12 @@ final class Unpickler {
     }
     
     // We are doing these checks to verify that input data is valid and that Unpickler can parse it
-    guard let storageObject = savedId[1].toAny() as? (Any, String),
-      let _ = storageObject.0 as? Data,
-      let _ = storagecClassToDtype(storageObject.1),
-      let key = savedId[2].toAny() as? String,
+    guard let _ = savedId[1].objectType(Data.self),
+      let storageObjectTypeName = savedId[1].objectName,
+      let _ = savedId[1].dtype,
+      let key = savedId[2].string,
       let _ = maybeDecodeAscii(from: savedId[3]),
-      let _ = savedId[4].toAny() as? Int else {
+      let _ = savedId[4].int else {
       throw UnpicklerError.unsupportedPersistentId
     }
             
@@ -273,10 +250,13 @@ final class Unpickler {
       return .object(cachedStorage)
     } else {
       guard let newStorage =
-        try? tensorLoader.load(dataType: storageObject.1,
+        try? tensorLoader.load(dataType: storageObjectTypeName,
                                key: key) else {
         throw UnpicklerError.unsupportedPersistentId
       }
+      
+      // TODO: Perform byteswapping here if needed based on byteorderdata parsed in PTFile
+      
       storageCache[key] = newStorage
       return .object(newStorage)
     }
@@ -1000,10 +980,7 @@ final class Unpickler {
     let object = stack.removeLast()
     
     logPrint("Should call function/constructor \(object) with args \(args)")
-    instanceFactory.initializeInstance(object: object, arguments: args)
-    
-    // For now, just push funcName back
-    append(object)
+    append(instanceFactory.initializeInstance(object: object, arguments: args))
   }
     
   /// Creates instance of new object and pushes it to the stack.

@@ -30,12 +30,13 @@ final class InstanceFactory {
     return nil
   }
   
-  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) {
+  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) -> UnpicklerValue {
     if let objectName = (object.toAny() as? (Any, String))?.1 {
       if let instantiator = unpickedNameInstantiators[objectName] {
-        instantiator.initializeInstance(object: object, arguments: arguments)
+        return instantiator.initializeInstance(object: object, arguments: arguments)
       }
-    }
+    }    
+    return object
   }
   
   struct Constants {

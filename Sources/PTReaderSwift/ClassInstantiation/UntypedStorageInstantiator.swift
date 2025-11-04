@@ -7,7 +7,8 @@ final class UntypedStorageInstantiator: Instantiator {
     return .object((Data(), className))
   }
   
-  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) {
+  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue)  -> UnpicklerValue {
+    object
   }
   
   var unpickledTypeNames: [String] {

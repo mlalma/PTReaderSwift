@@ -8,20 +8,25 @@ final class DictInstantiator: Instantiator {
     return .object(([AnyHashable: Any](), Constants.typeName))
   }
   
-  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) {
-    guard let arglist = arguments.toAny() as? [Any],
-          var objectInstance = (object.toAny() as? ([AnyHashable: Any], String))?.0 else {
+  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) -> UnpicklerValue {
+    guard let arglist = arguments.list,
+          var objectInstance = object.objectType([AnyHashable: Any].self) else {
       logPrint("Could not parse argument list \(arguments) for object \(object)")
-      return
+      return object
     }
-
+    
     for arg in arglist {
-      guard let keyValuePair = arg as? [Any], keyValuePair.count == 2, let key = keyValuePair[0] as? AnyHashable else {
+      guard let keyValuePair = arg.list,
+            keyValuePair.count == 2,
+            let key = keyValuePair[0].toAny() as? AnyHashable else {
         continue
       }
-      objectInstance[key] = keyValuePair[1]
+      objectInstance[key] = keyValuePair[1].toAny()
     }
+        
+    return object
   }
+  
   
   var unpickledTypeNames: [String] { [Constants.typeName] }
   

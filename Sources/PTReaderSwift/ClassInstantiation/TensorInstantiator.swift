@@ -1,5 +1,6 @@
 import Foundation
 import MLX
+import MLXUtilsLibrary
 
 final class TensorInstantiator: Instantiator {
   init() {}
@@ -8,7 +9,22 @@ final class TensorInstantiator: Instantiator {
     return .object((MLXArray(), Constants.typeName))
   }
   
-  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) {
+  /// This is actually `torch._utils._rebuild_tensor_v2` handling
+  func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) -> UnpicklerValue {
+    // storage, storage_offset, size, requires_grad, backward_hooks are the sent value
+    guard let argumentList = arguments.list, argumentList.count >= 1,
+          let storage = argumentList[0].objectType(Data.self),
+          let storageDType = argumentList[0].dtype else {
+      logPrint("Could not parse argument list \(arguments) for object \(object)")
+      return object
+    }
+    
+    guard let _ = object.objectType(MLXArray.self) else {
+      logPrint("\(object) is not a Tensor")
+      return object
+    }
+    
+    return .object((MLXArray(storage, dtype: storageDType), Constants.typeName))
   }
   
   var recognizedClassNames: [String] {
