@@ -1,6 +1,7 @@
 import Foundation
 import ZIPFoundation
 import MLX
+import MLXUtilsLibrary
 
 protocol TensorDataLoader {
   func load(dataType: String, key: String) throws -> (Data, String)
@@ -19,9 +20,10 @@ class PTFile {
   }
   
   var archive: Archive!
-  var version: Int!
-  var storageAlignment: Int!
-  var format: NumberFormat!
+  var version: Int?
+  var storageAlignment: Int?
+  var numberFormat: NumberFormat?
+  var parsedData: UnpicklerValue?
   
   private func readString(entry: Entry) throws -> String? {
     var output: String?
@@ -39,52 +41,49 @@ class PTFile {
   }
   
   init(fileName: URL) throws {
-    var parsedVersion: Int?
-    var parsedStorageAlignment: Int?
-    var parsedByteOrder: String?
-  
     guard let archive = try? Archive(url: fileName, accessMode: .read, pathEncoding: nil) else {
       throw ParsingError.couldNotUnarchive
     }
     self.archive = archive
     
-    for entry in archive {
-      print("ENTRY")
-      print("  PATH: " + entry.path)
-      print("  COMPRESSED SIZE: \(entry.compressedSize)")
-      print("  UNCOMPRESSED SIZE: \(entry.uncompressedSize)")
+    if let versionEntry = archive["archive/.format_version"] {
+      version = try readInt(entry: versionEntry)
+    } else {
+      version = nil
+    }
+    
+    if let storageAlignmentEntry = archive["archive/.storage_alignment"] {
+      storageAlignment = try readInt(entry: storageAlignmentEntry)
+    } else {
+      storageAlignment = nil
+    }
+    
+    if let byteOrderEntry = archive["archive/byteorder"] {
+      numberFormat = NumberFormat(rawValue: try readString(entry: byteOrderEntry) ?? "")
+    } else {
+      numberFormat = nil
+    }
+    
+    if let dataEntry = archive["archive/data.pkl"] {
+      var data: Data?
+      _ = try archive.extract(dataEntry, bufferSize: Int(dataEntry.uncompressedSize), consumer: { (extractedData) in
+        data = extractedData
+      })
       
-      if entry.path == "archive/.format_version" {
-        parsedVersion = try readInt(entry: entry)
-      } else if entry.path == "archive/.storage_alignment" {
-        parsedStorageAlignment = try readInt(entry: entry)
-      } else if entry.path == "archive/byteorder" {
-        parsedByteOrder = try readString(entry: entry)
-      } else if entry.path == "archive/data.pkl" {
-        var data: Data?
-        _ = try archive.extract(entry, bufferSize: Int(entry.uncompressedSize), consumer: { (extractedData) in
-          data = extractedData
-        })
-        
-        if let data {
-          parseData(data)
-        }
+      if let data {
+        parseData(data)
       }
     }
-    
-    guard let parsedVersion, let parsedStorageAlignment, let parsedByteOrder, let parsedNumberFormat = NumberFormat(rawValue: parsedByteOrder) else {
-      throw ParsingError.couldNotGetPTParams
-    }
-    
-    self.version = parsedVersion
-    self.storageAlignment = parsedStorageAlignment
-    self.format = parsedNumberFormat
   }
   
   private func parseData(_ data: Data) {
     let unpickler = Unpickler(inputData: data, tensorLoader: self)
-    let object = try? unpickler.load()
-    debugPrint("Unpickled this object \(object ?? "NO OBJECT")")
+    if let object = try? unpickler.load() {
+      parsedData = object
+      logPrint("Unpickled this object \(String(describing: object))")
+    } else {
+      logPrint("Could not unpickle object out of the data")
+    }
   }
 }
 

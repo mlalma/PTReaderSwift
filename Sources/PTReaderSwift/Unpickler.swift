@@ -39,7 +39,7 @@ final class Unpickler {
   /// Buffers for protocol version 5
   private var buffers: AnyIterator<Any>?
   /// Return value when STOP is found
-  private var returnValue: Any?
+  private var returnValue: UnpicklerValue?
   /// Flag to set for jumping out of the reading loop
   private var stopReading: Bool = false
   
@@ -141,7 +141,7 @@ final class Unpickler {
   /// Main load method. Reads a pickled object representation from the file.
   /// - Returns: The reconstituted object
   /// - Throws: Any error during deserialization
-  func load() throws -> Any? {
+  func load() throws -> UnpicklerValue? {
     // This is one-and-done. Return the parsed value object if we have already parsed it
     guard !stopReading else {
       return returnValue
