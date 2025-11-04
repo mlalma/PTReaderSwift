@@ -13,13 +13,11 @@ enum TestError: Error {
     throw TestError.generalError
   }
   
-  let t = Task { @PTReaderActor in
+  let val = await Task { @PTReaderActor in
     let file = try PTFile(fileName: url)
-    print("DUNZO")
     return file.parsedData
-  }
-  print("YAS")
-  let val = await t.result
+  }.result
+  
   print(val)
 }
 
@@ -38,14 +36,11 @@ enum TestError: Error {
   let reader = MockReader()
   let data = try! Data.init(contentsOf: url)
   
-  Task { @PTReaderActor in
-    InstanceFactory.shared.addInstantiator(TiktokenEncodingInstantiator())
-  }
-  
   let outputVal = await Task { @PTReaderActor in
+    InstanceFactory.shared.addInstantiator(TiktokenEncodingInstantiator())
     let unpickler = Unpickler(inputData: data, tensorLoader: reader)
     return try unpickler.load()
   }.result
   
-  print("OUTPUTVAL: \(outputVal)")
+  print(outputVal)
 }
