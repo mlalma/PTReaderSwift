@@ -7,6 +7,7 @@ import MLXUtilsLibrary
 /// This class is not focused on full compatibilty, but the required subset for loading PyTorch's .pt files that use pickle to store data.
 /// During unpickiing there is a tiny stack-based virtual machine (VM) interpreting opcodes from the binary stream to rebuild the object graph.
 /// Available Python objects are mapped to Swift objects where possible.
+@PTReaderActor
 final class Unpickler {
   /// How to decode 8-bit string instances pickled by Python 2
   enum PickledCompatiblityEncoding {
@@ -20,9 +21,7 @@ final class Unpickler {
   private let fileReadline: () -> Data
   /// Encoding settings
   private let encoding: PickledCompatiblityEncoding
-  /// Class instance instantiator
-  private let instanceFactory = InstanceFactory()
-
+  
   private let tensorLoader: TensorDataLoader
 
   /// Unpickler state
@@ -52,7 +51,7 @@ final class Unpickler {
     static let storageTypeName = "storage"
   }
   
-  /// Cosntructor.
+  /// Constructor.
   /// - Parameters:
   ///   - fileRead: Closure that reads n bytes
   ///   - fileReadline: Closure that reads a line
@@ -268,7 +267,7 @@ final class Unpickler {
   ///   - name: Python class name.
   /// - Returns: Class to return.
   func findClass(module: String, name: String) throws -> UnpicklerValue {
-    guard let instantiatedClass = instanceFactory.createInstance(module: module, className: name) else {
+    guard let instantiatedClass = InstanceFactory.shared.createInstance(module: module, className: name) else {
       debugPrint("Could not create a new instance of class from module \(module) with class name \(name)")
       throw UnpicklerError.classCouldNotBeInstantiated
     }
@@ -980,20 +979,16 @@ final class Unpickler {
     let object = stack.removeLast()
     
     logPrint("Should call function/constructor \(object) with args \(args)")
-    append(instanceFactory.initializeInstance(object: object, arguments: args))
+    append(InstanceFactory.shared.initializeInstance(object: object, arguments: args))
   }
     
   /// Creates instance of new object and pushes it to the stack.
   private func loadNewObject() throws {
-    // TODO: Should create new object with given className
-
     let args = stack.removeLast()
-    let className = stack.removeLast()
+    let object = stack.removeLast()
         
-    debugPrint("loadNewObject() is not right now supported! Should create class \(className) with args \(args)")
-    
-    // For now, just push a placeholder
-    append(args)
+    logPrint("Should call function/constructor \(object) with args \(args)")
+    append(InstanceFactory.shared.initializeInstance(object: object, arguments: args))
   }
     
   /// Creates instance of new object and pushes it to the stack.

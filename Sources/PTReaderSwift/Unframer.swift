@@ -1,6 +1,7 @@
 import Foundation
 
 /// Handles frame-based reading from pickle files.
+@PTReaderActor
 final class Unframer {
   private let readFromResource: (Int) -> Data
   private let readLineFromResource: () -> Data

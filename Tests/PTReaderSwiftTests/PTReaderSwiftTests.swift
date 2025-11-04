@@ -13,7 +13,14 @@ enum TestError: Error {
     throw TestError.generalError
   }
   
-  let _ = try PTFile(fileName: url)
+  let t = Task { @PTReaderActor in
+    let file = try PTFile(fileName: url)
+    print("DUNZO")
+    return file.parsedData
+  }
+  print("YAS")
+  let val = await t.result
+  print(val)
 }
 
 @Test func testUnpickling() async throws {
@@ -31,6 +38,14 @@ enum TestError: Error {
   let reader = MockReader()
   let data = try! Data.init(contentsOf: url)
   
-  let unpickler = Unpickler(inputData: data, tensorLoader: reader)
-  let outputData = try unpickler.load()
+  Task { @PTReaderActor in
+    InstanceFactory.shared.addInstantiator(TiktokenEncodingInstantiator())
+  }
+  
+  let outputVal = await Task { @PTReaderActor in
+    let unpickler = Unpickler(inputData: data, tensorLoader: reader)
+    return try unpickler.load()
+  }.result
+  
+  print("OUTPUTVAL: \(outputVal)")
 }

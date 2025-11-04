@@ -3,11 +3,13 @@ import ZIPFoundation
 import MLX
 import MLXUtilsLibrary
 
+@PTReaderActor
 protocol TensorDataLoader {
   func load(dataType: String, key: String) throws -> (Data, String)
 }
 
-class PTFile {
+@PTReaderActor
+final class PTFile {
   enum ParsingError : Error {
     case couldNotUnarchive
     case couldNotGetPTParams

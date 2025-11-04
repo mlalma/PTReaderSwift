@@ -1,16 +1,19 @@
 import Foundation
 
+@PTReaderActor
 final class InstanceFactory {
   var classNameInstantiators: [String: Instantiator] = [:]
   var unpickedNameInstantiators: [String: Instantiator] = [:]
   
-  init() {
+  static let shared = InstanceFactory()
+  
+  private init() {
     addInstantiator(TensorInstantiator())
     addInstantiator(UntypedStorageInstantiator())
     addInstantiator(DictInstantiator())
   }
   
-  private func addInstantiator(_ instantiator: Instantiator) {
+  func addInstantiator(_ instantiator: Instantiator) {
     for className in instantiator.recognizedClassNames {
       classNameInstantiators[className] = instantiator
     }
@@ -35,7 +38,7 @@ final class InstanceFactory {
       if let instantiator = unpickedNameInstantiators[objectName] {
         return instantiator.initializeInstance(object: object, arguments: arguments)
       }
-    }    
+    }
     return object
   }
   

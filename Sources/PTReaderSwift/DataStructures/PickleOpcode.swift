@@ -1,7 +1,7 @@
 import Foundation
 
 /// Supported pickle opcodes.
-struct PickleOpcode {
+struct PickleOpcode: Sendable {
   /// Opcodes for protocol versions 0 and 1.
 
   /// Push special markobject on stack

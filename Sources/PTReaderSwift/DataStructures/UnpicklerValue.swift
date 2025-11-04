@@ -2,7 +2,8 @@ import Foundation
 import MLX
 
 /// Represents different types that can be stored to stack during unpickling.
-enum UnpicklerValue {
+/// **NOTE:** Once you have passed value to `UnpicklerValue` do not modify it anymore!
+enum UnpicklerValue: @unchecked Sendable {
   case none
   case bool(Bool)
   case int(Int)
@@ -38,20 +39,14 @@ enum UnpicklerValue {
   }
 }
 
-/// Utility methods to extract more quickly
+/// Utility methods to extract values more quickly
 extension UnpicklerValue {
   var string: String? { if case .string(let value) = self { return value } else { return nil } }
-  
   var int: Int? { if case .int(let value) = self { return value } else { return nil } }
-  
   var object: (Any, String)? { if case .object(let value) = self { return value } else { return nil } }
-  
   var objectName: String? { object?.1 }
-  
   func objectType<T>(_ type: T.Type) -> T? { object?.0 as? T }
-  
   var bool: Bool? { if case .bool(let value) = self { return value } else { return nil} }
-  
   var list: [UnpicklerValue]? {
     switch self {
     case .list(let value), .tuple(let value): return value

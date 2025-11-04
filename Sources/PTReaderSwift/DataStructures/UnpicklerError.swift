@@ -1,7 +1,7 @@
 import Foundation
 
 // Error type for unpickling errors.
-enum UnpicklerError: Error {
+enum UnpicklerError: Error, Sendable {
   case frameExhausted
   case unexpectedFrameState
   case error(String)
