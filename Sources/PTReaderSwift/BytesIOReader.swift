@@ -45,7 +45,7 @@ final class BytesIOReader {
     let range = position..<(position + bytesToRead)
     let result = data[range]
     position += bytesToRead
-    return result
+    return Data(result)
   }
     
   /// Read a line (up to and including newline character)
