@@ -742,13 +742,13 @@ final class Unpickler {
   /// Loads dictionary to stack. Gets items from metastack and then adds them as key, value pairs to dictionary.
   private func loadDict() throws {
     let items = popMark()
-    var dict: [AnyHashable: UnpicklerValue] = [:]
+    var dict: [AnyHashable: Any] = [:]
     
     var i = 0
     while i < items.count - 1 {
         let key = items[i].toAny() as! AnyHashable
         let value = items[i + 1]
-        dict[key] = value
+        dict[key] = value.toAny()
         i += 2
     }
     
@@ -915,7 +915,7 @@ final class Unpickler {
       while i < items.count - 1 {
         let key = items[i].toAny() as! AnyHashable
         let value = items[i + 1]
-        dict[key] = value
+        dict[key] = value.toAny()
         i += 2
       }
       append(.dict(dict))
@@ -938,11 +938,11 @@ final class Unpickler {
     
   /// Applies saved state to the object that was just created.
   private func loadBuild() throws {
-    // TODO: Do a full full implementation to restore the state to instantiated object
     let state = stack.removeLast()
-    debugPrint("loadBuild() is not right now supported! State to load to the object: \(state)")
-    // State is either proper dictionary or tuple where the second value is mapping for attributes
-    // Inst stays on stack as last item, it is the instance to restore
+    let object = stack.removeLast()
+    
+    logPrint("Should build function \(object)")
+    append(InstanceFactory.shared.initializeInstance(object: object, arguments: state))
   }
   
   /// Moves all items from stack to metastack.

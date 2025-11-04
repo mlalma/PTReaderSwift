@@ -11,7 +11,7 @@ enum UnpicklerValue: @unchecked Sendable {
   case string(String)
   case bytes(Data)
   case list([UnpicklerValue])
-  case dict([AnyHashable: UnpicklerValue])
+  case dict([AnyHashable: Any])
   case tuple([UnpicklerValue])
   case set(Set<AnyHashable>)
   case mark
@@ -53,6 +53,7 @@ extension UnpicklerValue {
     default: return nil
     }
   }
+  var dict: [AnyHashable: Any]? { if case .dict(let value) = self { return value } else { return nil } }
   
   var dtype: DType? {
     guard let className = objectName else { return nil }

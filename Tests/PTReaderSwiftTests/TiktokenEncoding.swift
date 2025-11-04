@@ -1,0 +1,8 @@
+import Foundation
+ 
+final class TiktokenEncoding {
+  var name: String?
+  var patStr: String?
+  var mergeableRanks: [Data: Int]?
+  var specialTokens: [String: Int]?
+}

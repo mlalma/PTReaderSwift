@@ -7,12 +7,24 @@ final class TiktokenEncodingInstantiator: Instantiator {
   init() {}
   
   func createInstance(className: String) -> UnpicklerValue {
-    return .object((NSObject(), Constants.typeName))
+    return .object((TiktokenEncoding(), Constants.typeName))
   }
   
   func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) -> UnpicklerValue {
-    // TODO: Let's see
-    object
+    if let argumentDict = arguments.dict, let encoder = object.objectType(TiktokenEncoding.self) {
+      for (key, values) in argumentDict {
+        if let keyString = key as? String {
+          switch keyString {
+          case "pat_str": encoder.patStr = values as? String
+          case "name": encoder.name = values as? String
+          case "special_tokens": encoder.specialTokens = values as? [String: Int]
+          case "mergeable_ranks": encoder.mergeableRanks = values as? [Data: Int]
+          default: logPrint("Unknown state key when initializing TiktokenEncoding: \(keyString)")
+          }
+        }
+      }
+    }
+    return object
   }
   
   var recognizedClassNames: [String] {

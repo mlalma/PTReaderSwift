@@ -34,7 +34,7 @@ final class InstanceFactory {
   }
   
   func initializeInstance(object: UnpicklerValue, arguments: UnpicklerValue) -> UnpicklerValue {
-    if let objectName = (object.toAny() as? (Any, String))?.1 {
+    if let objectName = object.objectName {
       if let instantiator = unpickedNameInstantiators[objectName] {
         return instantiator.initializeInstance(object: object, arguments: arguments)
       }
