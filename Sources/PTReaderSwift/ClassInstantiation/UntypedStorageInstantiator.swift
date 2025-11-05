@@ -12,17 +12,19 @@ final class UntypedStorageInstantiator: Instantiator {
   }
   
   var unpickledTypeNames: [String] {
-    ["IntStorage"]
+    ["DoubleStorage", "FloatStorage", "HalfStorage", "LongStorage",
+     "IntStorage", "ShortStorage", "CharStorage", "ByteStorage",
+     "BoolStorage", "BFloat16Storage", "CompleteFloatStorage"]
   }
-    
+  
   var recognizedClassNames: [String] {
-    Constants.classNames
+    unpickledTypeNames.map { "torch" + InstanceFactory.Constants.moduleDivider + $0 }
   }
   
   struct Constants {
-    static let classNames = [
+    /* static let classNames = [
       "torch" + InstanceFactory.Constants.moduleDivider + "IntStorage"
-    ]
+    ] */
   }
 }
 

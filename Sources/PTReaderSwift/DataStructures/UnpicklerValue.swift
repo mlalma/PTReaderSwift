@@ -53,7 +53,16 @@ extension UnpicklerValue {
     default: return nil
     }
   }
-  var dict: [AnyHashable: Any]? { if case .dict(let value) = self { return value } else { return nil } }
+  var dict: [AnyHashable: Any]? {
+    if case .dict(let value) = self {
+      return value
+    } else {
+      if self.objectName == DictInstantiator.Constants.typeName {
+        return self.objectType([AnyHashable: Any].self)
+      }
+      return nil
+    }
+  }
   
   var dtype: DType? {
     guard let className = objectName else { return nil }

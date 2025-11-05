@@ -38,6 +38,10 @@ final class InstanceFactory {
       if let instantiator = unpickedNameInstantiators[objectName] {
         return instantiator.initializeInstance(object: object, arguments: arguments)
       }
+    } else if var dict = object.dict, let argDict = arguments.dict {
+      for (key, value) in argDict {
+        dict[key] = value
+      }
     }
     return object
   }

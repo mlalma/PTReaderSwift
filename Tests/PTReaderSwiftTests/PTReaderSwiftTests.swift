@@ -1,11 +1,13 @@
 import Foundation
 import Testing
 import MLXUtilsLibrary
+import MLX
 @testable import PTReaderSwift
 
 enum TestError: Error {
   case couldNotFindResource
   case generalError
+  case wrongOutputData
 }
 
 @Test func testLoading() async throws {
@@ -46,14 +48,38 @@ enum TestError: Error {
     print("Couldn't find model_000650.pt")
     throw TestError.couldNotFindResource
   }
-  
-  debugArchive(url: url)
-  
+    
   let val = await Task { @PTReaderActor in
     let file = try PTFile(fileName: url)
     return file.parsedData
   }.result
   
-  // TODO: Write #expect checks
+  guard case .success(let outputVal) = val, let outputVal, let unpickledDict = outputVal.dict else {
+    throw TestError.wrongOutputData
+  }
+  
+  var dict: [String: MLXArray] = [:]
+  
+  for (key, value) in unpickledDict {
+    guard let keyStr = key as? String else {
+      throw TestError.wrongOutputData
+    }
+    
+    guard let mlxArray = (value as? (MLXArray, String)), mlxArray.1 == "Tensor" else {
+      throw TestError.wrongOutputData
+    }
+    
+    dict[keyStr] = mlxArray.0
+  }
+  
+  #expect(dict.keys.count == 122)
+  
+  print("Dictionary with \(dict.keys.count) keys:")
+  
+  for key in dict.keys.sorted() {
+    let data = dict[key]!
+    print("  \(key): Tensor(shape=\(data.shape), dtype=\(data.dtype))")    
+  }
+
   print(val)
 }

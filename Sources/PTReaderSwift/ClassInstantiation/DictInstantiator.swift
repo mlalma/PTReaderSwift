@@ -27,7 +27,6 @@ final class DictInstantiator: Instantiator {
     return object
   }
   
-  
   var unpickledTypeNames: [String] { [Constants.typeName] }
   
   var recognizedClassNames: [String] {

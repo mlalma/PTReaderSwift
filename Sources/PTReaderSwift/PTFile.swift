@@ -93,11 +93,15 @@ final class PTFile {
   
   private func parseData(_ data: Data) {
     let unpickler = Unpickler(inputData: data, persistentLoader: self)
-    if let object = try? unpickler.load() {
-      parsedData = object
-      logPrint("Unpickled this object \(String(describing: object))")
-    } else {
-      logPrint("Could not unpickle object out of the data")
+    do {
+      if let object = try unpickler.load() {
+        parsedData = object
+        logPrint("Unpickled this object \(String(describing: object))")
+      } else {
+        logPrint("Could not unpickle object out of the data")
+      }
+    } catch (let ex) {
+      print(ex)
     }
   }
   

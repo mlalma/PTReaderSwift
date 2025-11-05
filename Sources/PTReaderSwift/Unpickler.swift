@@ -48,6 +48,10 @@ final class Unpickler {
     static let endOfLineMarker = UInt8(ascii: "\n")
   }
   
+  #if DEBUG
+  var dispatchCounter = 0
+  #endif
+  
   /// Constructor.
   /// - Parameters:
   ///   - fileRead: Closure that reads n bytes
@@ -158,8 +162,15 @@ final class Unpickler {
         readLineFromResource: fileReadline
     )
     
+    #if DEBUG
+    dispatchCounter = 0
+    #endif
+    
     // Main dispatch loop
     while !stopReading {
+      #if DEBUG
+      dispatchCounter += 1
+      #endif
       let key = try read(1)
       if key.isEmpty {
         throw UnpicklerError.eof
@@ -214,9 +225,9 @@ final class Unpickler {
   ///   - module: Python module where the class is located.
   ///   - name: Python class name.
   /// - Returns: Class to return.
-  func findClass(module: String, name: String) throws -> UnpicklerValue {
+  func findClass(module: String?, name: String) throws -> UnpicklerValue {
     guard let instantiatedClass = InstanceFactory.shared.createInstance(module: module, className: name) else {
-      debugPrint("Could not create a new instance of class from module \(module) with class name \(name)")
+      debugPrint("Could not create a new instance of class from module \(module ?? "") with class name \(name)")
       throw UnpicklerError.classCouldNotBeInstantiated
     }
     
@@ -499,7 +510,7 @@ final class Unpickler {
     append(.float(value))
   }
     
-  /// Decodes a string  from Python 2
+  /// Decodes a string  from Python 2.
   private func decodeString(_ value: Data) throws -> String {
     if encoding == .bytes {
       // Return as string representation of bytes
@@ -869,7 +880,9 @@ final class Unpickler {
   private func loadDictItems() throws {
     let items = popMark()
     
-    if case .dict(var dict) = stack.removeLast() {
+    let dictItem = stack.removeLast()
+    
+    if var dict = dictItem.dict {
       var i = 0
       while i < items.count - 1 {
         let key = items[i].toAny() as! AnyHashable
@@ -895,12 +908,12 @@ final class Unpickler {
     }
   }
     
-  /// Applies saved state to the object that was just created.
+  /// Applies saved state to an object.
   private func loadBuild() throws {
     let state = stack.removeLast()
     let object = stack.removeLast()
-    
-    logPrint("Should build function \(object)")
+            
+    // logPrint("Should build function \(object)")
     append(InstanceFactory.shared.initializeInstance(object: object, arguments: state))
   }
   
@@ -1032,24 +1045,20 @@ final class Unpickler {
         throw UnpicklerError.error("Failed to decode INST")
     }
     
-    let _ = try findClass(module: module, name: name)
+    let object = try findClass(module: module, name: name)
     let values = popMark()
-    
-    debugPrint("loadInstance() is not right now supported! Should create class \(name) with args \(values)")
-    
-    // Simplified - just push a placeholder
-    append(.none)
+    append(InstanceFactory.shared.initializeInstance(object: object, arguments: .list(values)))
   }
     
   /// Creates an object and initializes it from metastack values.
   private func loadObject() throws {
     var args = popMark()
-    let className = args.removeFirst()  // cls
+    let className = args.removeFirst().string
     
-    debugPrint("loadObject() is not right now supported! Should create class \(className) with args \(args)")
-    
-    // Simplified - just push a placeholder
-    append(.none)
+    if let className {
+      let object = try findClass(module: nil, name: className)
+      append(InstanceFactory.shared.initializeInstance(object: object, arguments: .list(args)))
+    }
   }
     
   /// Loads bytearray into stack.
