@@ -21,11 +21,13 @@ final class PTFile {
     case bigEndian = "big"
   }
   
-  var archive: Archive!
+  internal var archive: Archive!
   var version: Int?
   var storageAlignment: Int?
   var numberFormat: NumberFormat?
   var parsedData: UnpicklerValue?
+  internal var parsedArchiveEntries: [(path: String, entry: Entry)] = []
+  internal var storageCache: [String: (Data, String)] = [:]
   
   private func readString(entry: Entry) throws -> String? {
     var output: String?
@@ -42,31 +44,42 @@ final class PTFile {
     return nil
   }
   
+  private func readArchiveEntries()  {
+    for entry in archive {
+      parsedArchiveEntries.append((path: entry.path, entry: entry))
+    }
+  }
+  
+  internal func findArchiveEntry(ending: String) -> Entry? {
+    parsedArchiveEntries.first { $0.path.hasSuffix(ending) }?.entry
+  }
+  
   init(fileName: URL) throws {
     guard let archive = try? Archive(url: fileName, accessMode: .read, pathEncoding: nil) else {
       throw ParsingError.couldNotUnarchive
     }
     self.archive = archive
+    readArchiveEntries()
     
-    if let versionEntry = archive["archive/.format_version"] {
+    if let versionEntry = findArchiveEntry(ending: "/.format_version") {
       version = try readInt(entry: versionEntry)
     } else {
       version = nil
     }
     
-    if let storageAlignmentEntry = archive["archive/.storage_alignment"] {
+    if let storageAlignmentEntry = findArchiveEntry(ending: "/.storage_alignment") {
       storageAlignment = try readInt(entry: storageAlignmentEntry)
     } else {
       storageAlignment = nil
     }
     
-    if let byteOrderEntry = archive["archive/byteorder"] {
+    if let byteOrderEntry = findArchiveEntry(ending: "/byteorder") {
       numberFormat = NumberFormat(rawValue: try readString(entry: byteOrderEntry) ?? "")
     } else {
       numberFormat = nil
     }
     
-    if let dataEntry = archive["archive/data.pkl"] {
+    if let dataEntry = findArchiveEntry(ending: "/data.pkl") {
       var data: Data?
       _ = try archive.extract(dataEntry, bufferSize: Int(dataEntry.uncompressedSize), consumer: { (extractedData) in
         data = extractedData
@@ -79,7 +92,7 @@ final class PTFile {
   }
   
   private func parseData(_ data: Data) {
-    let unpickler = Unpickler(inputData: data, tensorLoader: self)
+    let unpickler = Unpickler(inputData: data, persistentLoader: self)
     if let object = try? unpickler.load() {
       parsedData = object
       logPrint("Unpickled this object \(String(describing: object))")
@@ -87,21 +100,9 @@ final class PTFile {
       logPrint("Could not unpickle object out of the data")
     }
   }
-}
-
-extension PTFile: TensorDataLoader {
-  func load(dataType: String, key: String) throws -> (Data, String) {
-    if let tensorData = archive["archive/data/" + key] {
-      var data: Data?
-      _ = try archive.extract(tensorData, bufferSize: Int(tensorData.uncompressedSize), consumer: { (extractedData) in
-        data = extractedData
-      })
-      
-      if let data {
-        return (data, dataType)
-      }
-    }
-    
-    throw ParsingError.couldNotLoadTensor
+  
+  struct Constants {
+    /// Persistent loader type
+    static let storageTypeNameForLoadingTensor = "storage"
   }
 }

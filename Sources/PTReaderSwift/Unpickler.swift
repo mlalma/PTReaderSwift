@@ -21,8 +21,8 @@ final class Unpickler {
   private let fileReadline: () -> Data
   /// Encoding settings
   private let encoding: PickledCompatiblityEncoding
-  
-  private let tensorLoader: TensorDataLoader
+  /// Persistent loader routine
+  private weak var persistentLoader: UnpicklerPersistentLoader?
 
   /// Unpickler state
   private var unframer: Unframer!
@@ -30,7 +30,6 @@ final class Unpickler {
   private var metastack: [[UnpicklerValue]] = []
   private var memo: [Int: UnpicklerValue] = [:]
   private var invertedRegistry: [Int: (String, String)] = [:]
-  private var storageCache: [String: (Data, String)] = [:]
   
   /// Protocol version of the unpickled stream
   private var proto: Int = 0
@@ -47,27 +46,25 @@ final class Unpickler {
     static let highestSupportedProtocolVersion = 5
     /// End-of-line marker when unpickling strings
     static let endOfLineMarker = UInt8(ascii: "\n")
-    /// Persistent loader type
-    static let storageTypeName = "storage"
   }
   
   /// Constructor.
   /// - Parameters:
   ///   - fileRead: Closure that reads n bytes
   ///   - fileReadline: Closure that reads a line
-  ///   - tensorLoader: Funcationality to read tensor data
+  ///   - persistentLoader: Loader functionality for persistent load
   ///   - encoding: Encoding for string objects
   ///   - buffers: Iterator for out-of-band buffers (protocol 5)
   init(
     fileRead: @escaping (Int) -> Data,
     fileReadline: @escaping () -> Data,
-    tensorLoader: TensorDataLoader,
+    persistentLoader: UnpicklerPersistentLoader?,
     encoding: PickledCompatiblityEncoding = .ascii,
     buffers: AnyIterator<Any>? = nil
   ) {
     self.fileRead = fileRead
     self.fileReadline = fileReadline
-    self.tensorLoader = tensorLoader
+    self.persistentLoader = persistentLoader
     self.encoding = encoding
     self.buffers = buffers
   }
@@ -75,7 +72,7 @@ final class Unpickler {
   /// Convenience initializer for FileHandle.
   convenience init(
     fileHandle: FileHandle,
-    tensorLoader: TensorDataLoader,
+    persistentLoader: UnpicklerPersistentLoader?,
     encoding: PickledCompatiblityEncoding = .ascii,
     buffers: AnyIterator<Any>? = nil
   ) {
@@ -86,7 +83,7 @@ final class Unpickler {
       fileReadline: {
         fileHandle.readLine()
       },
-      tensorLoader: tensorLoader,
+      persistentLoader: persistentLoader,
       encoding: encoding,
       buffers: buffers
     )
@@ -95,7 +92,7 @@ final class Unpickler {
   /// Convenience initializer for Data.
   convenience init(
     inputData: Data,
-    tensorLoader: TensorDataLoader,
+    persistentLoader: UnpicklerPersistentLoader?,
     encoding: PickledCompatiblityEncoding = .ascii,
     buffers: AnyIterator<Any>? = nil
   ) {
@@ -122,7 +119,7 @@ final class Unpickler {
         position = newPosition
         return returnedData
       },
-      tensorLoader: tensorLoader,
+      persistentLoader: persistentLoader,
       encoding: encoding,
       buffers: buffers
     )
@@ -210,55 +207,6 @@ final class Unpickler {
       let items = stack
       stack = metastack.popLast() ?? []
       return items
-  }
-    
-  private func maybeDecodeAscii(from value: UnpicklerValue) -> String? {
-    if case .string(let str) = value {
-      return str
-    } else if case .bytes(let byteStr) = value {
-      return String(bytes: byteStr, encoding: .ascii)
-    }
-    return nil
-  }
-  
-  /// Handle persistent load, which reads the data for tensor objects.
-  /// - Parameter pid: Array of parameters that need to be unpacked.
-  /// - Returns: Generated tensor object (MLXArray).
-  func persistentLoad(_ savedId: [UnpicklerValue]) throws -> UnpicklerValue {
-    guard let firstVal = savedId.first,
-          savedId.count >= 5  else {
-      throw UnpicklerError.unsupportedPersistentId
-    }
-          
-    guard let typeName = maybeDecodeAscii(from: firstVal),
-          typeName == Constants.storageTypeName else {
-      throw UnpicklerError.unsupportedPersistentId
-    }
-    
-    // We are doing these checks to verify that input data is valid and that Unpickler can parse it
-    guard let _ = savedId[1].objectType(Data.self),
-      let storageObjectTypeName = savedId[1].objectName,
-      let _ = savedId[1].dtype,
-      let key = savedId[2].string,
-      let _ = maybeDecodeAscii(from: savedId[3]),
-      let _ = savedId[4].int else {
-      throw UnpicklerError.unsupportedPersistentId
-    }
-            
-    if let cachedStorage = storageCache[key] {
-      return .object(cachedStorage)
-    } else {
-      guard let newStorage =
-        try? tensorLoader.load(dataType: storageObjectTypeName,
-                               key: key) else {
-        throw UnpicklerError.unsupportedPersistentId
-      }
-      
-      // TODO: Perform byteswapping here if needed based on byteorderdata parsed in PTFile
-      
-      storageCache[key] = newStorage
-      return .object(newStorage)
-    }
   }
     
   /// Finds the correct class and to instantiate based on Python module and Python class.
@@ -409,17 +357,28 @@ final class Unpickler {
   private func loadPersid() throws {
     let line = try readline()
     guard let pidString = String(data: line.dropLast(), encoding: .ascii) else {
-      throw UnpicklerError.error("persistent IDs in protocol 0 must be ASCII strings")
+      throw UnpicklerError.error("Persistent IDs in protocol version 0 must be ASCII strings")
     }
-    let value = try persistentLoad([.string(pidString)])
-    append(value)
+    
+    if let persistentLoader {
+      let value = try persistentLoader.load([.string(pidString)])
+      append(value)
+    } else {
+      logPrint("Persistent loader not defined or available so adding a null object to stack instead")
+      append(.none)
+    }
   }
     
   /// Loads persistent data such as tensor data.
   private func loadBinpersid() throws {
     if let pid = stack.removeLast().toAny() as? [UnpicklerValue] {
-      let value = try persistentLoad(pid)
-      append(value)
+      if let persistentLoader {
+        let value = try persistentLoader.load(pid)
+        append(value)
+      } else {
+        logPrint("Persistent loader not defined or available so adding a null object to stack instead")
+        append(.none)
+      }
     }
   }
     
