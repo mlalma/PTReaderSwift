@@ -1,6 +1,6 @@
 import Foundation
 import MLX
-import MLXUtilsLibrary
+internal import MLXUtilsLibrary
 
 @PTReaderActor
 extension PTFile : UnpicklerPersistentLoader {

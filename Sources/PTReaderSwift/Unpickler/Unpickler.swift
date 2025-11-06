@@ -1,6 +1,6 @@
 import Foundation
 import MLX
-import MLXUtilsLibrary
+internal import MLXUtilsLibrary
 
 /// Swift port of Python's Unpickler class for reading pickle files.
 /// Pickle is Python’s built-in, Python-specific binary serialization format to turn Python objecs into a byte stream and back.

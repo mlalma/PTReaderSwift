@@ -1,18 +1,30 @@
 import Foundation
 
-// Error type for unpickling errors.
-enum UnpicklerError: Error, Sendable {
-  case frameExhausted
-  case unexpectedFrameState
-  case error(String)
-  case eof
-  case unsupportedProtocol(Int)
-  case unsupportedPersistentId
-  case negativeByteCount
-  case exceedsMaxSize
-  case memoNotFound(Int)
-  case negativeArgument
-  case unregisteredExtension(Int)
-  case classCouldNotBeInstantiated
+/// Errors that can occur during unpickling operations.
+public enum UnpicklerError: Error, Sendable {
+    /// Frame data has been exhausted before completing the operation.
+    case frameExhausted
+    /// Frame is in an unexpected or invalid state.
+    case unexpectedFrameState
+    /// General error with a descriptive message.
+    case error(String)
+    /// Unexpected end of file encountered.
+    case eof
+    /// Pickle protocol version is not supported.
+    case unsupportedProtocol(Int)
+    /// Persistent ID operation is not supported.
+    case unsupportedPersistentId
+    /// Byte count value is negative.
+    case negativeByteCount
+    /// Data size exceeds maximum allowed size.
+    case exceedsMaxSize
+    /// Memo entry not found at the specified index.
+    case memoNotFound(Int)
+    /// Argument value is negative where positive expected.
+    case negativeArgument
+    /// Extension code is not registered.
+    case unregisteredExtension(Int)
+    /// Class could not be instantiated during unpickling.
+    case classCouldNotBeInstantiated
 }
 

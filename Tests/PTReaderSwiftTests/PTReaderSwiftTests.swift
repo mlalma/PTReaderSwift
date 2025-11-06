@@ -18,13 +18,18 @@ enum TestError: Error {
     throw TestError.couldNotFindResource
   }
     
-  let val = await Task { @PTReaderActor in
+  let outputVal = try await Task { @PTReaderActor in
     let file = try PTFile(fileName: url)
     return file.parseData()
-  }.result
+  }.value
   
-  // TODO: Write #expect checks
-  print(val)
+  guard let outputVal,
+        let outputObject = outputVal.objectType(MLXArray.self),
+        outputVal.objectName == "Tensor" else {
+    throw TestError.wrongOutputData
+  }
+  
+  #expect(outputObject.shape == [65536])
 }
 
 /// Test using just unpickling functionality
