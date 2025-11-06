@@ -8,17 +8,7 @@ Note that Python unpickling uses the language's and its runtime's features quite
 
 For reading `.pt` files a somewhat robust unpickling can be built, but general purpose unpickler would be very difficult.
 
-The implementation is highly experimental and highly likely if you need to use it, you need add new `Instantiator` implementations to create and initialize class types properly.
-
-## Features
-
-- 📦 **Read PyTorch `.pt` files** - Load PyTorch model checkpoints and serialized data
-- 🔄 **Convert to MLX arrays** - Automatic conversion of PyTorch tensors to MLX arrays
-- 🐍 **Python pickle protocol** - Full unpickling support for Python objects
-- 🎯 **Type-safe** - Strongly typed Swift API with comprehensive error handling
-- 🔌 **Extensible** - Custom instantiator system for handling custom Python classes
-- 🗜️ **ZIP archive support** - Handles PyTorch's ZIP-based `.pt` format
-- ⚡️ **Swift 6 ready** - Built with modern Swift concurrency features
+The implementation is very experimental and it is highly likely that you need to add new `Instantiator` implementations to create and initialize class types properly depending on the complexity of your `.pt` file.
 
 ## Requirements
 
