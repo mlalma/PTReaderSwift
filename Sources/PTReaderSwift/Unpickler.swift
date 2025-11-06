@@ -912,8 +912,10 @@ final class Unpickler {
   private func loadBuild() throws {
     let state = stack.removeLast()
     let object = stack.removeLast()
+    
+    /// - NOTE: Python version does interning to add new variables on run-time to objects, which is not supported by Swift.
+    /// Need to be creative here, e.g. if `object` is ``Dict`` and state is also ``Dict``, then just adding the key,value pairs to object and so forth.
             
-    // logPrint("Should build function \(object)")
     append(InstanceFactory.shared.initializeInstance(object: object, arguments: state))
   }
   

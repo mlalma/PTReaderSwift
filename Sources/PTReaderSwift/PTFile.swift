@@ -78,31 +78,34 @@ final class PTFile {
     } else {
       numberFormat = nil
     }
-    
-    if let dataEntry = findArchiveEntry(ending: "/data.pkl") {
-      var data: Data?
-      _ = try archive.extract(dataEntry, bufferSize: Int(dataEntry.uncompressedSize), consumer: { (extractedData) in
-        data = extractedData
-      })
-      
-      if let data {
-        parseData(data)
-      }
-    }
   }
   
-  private func parseData(_ data: Data) {
-    let unpickler = Unpickler(inputData: data, persistentLoader: self)
+  func parseData() -> UnpicklerValue? {
+    guard parsedData == nil else { return parsedData }
+    
     do {
-      if let object = try unpickler.load() {
-        parsedData = object
-        logPrint("Unpickled this object \(String(describing: object))")
-      } else {
-        logPrint("Could not unpickle object out of the data")
-      }
+      if let dataEntry = findArchiveEntry(ending: "/data.pkl") {
+        var data: Data?
+        _ = try archive.extract(dataEntry, bufferSize: Int(dataEntry.uncompressedSize), consumer: { (extractedData) in
+          data = extractedData
+        })
+      
+        if let data {
+          let unpickler = Unpickler(inputData: data, persistentLoader: self)
+          if let object = try unpickler.load() {
+            parsedData = object
+            logPrint("Unpickled this object \(String(describing: object))")
+            return parsedData
+          } else {
+            logPrint("Could not unpickle object out of the data")
+          }
+        }
+      }       
     } catch (let ex) {
-      print(ex)
+      logPrint("Unpickling failed with error: \(ex)")
     }
+    
+    return nil
   }
   
   struct Constants {

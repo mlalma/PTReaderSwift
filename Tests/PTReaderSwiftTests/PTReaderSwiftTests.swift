@@ -4,12 +4,14 @@ import MLXUtilsLibrary
 import MLX
 @testable import PTReaderSwift
 
+/// Test errors
 enum TestError: Error {
   case couldNotFindResource
   case generalError
   case wrongOutputData
 }
 
+/// Test loading a small .pt file
 @Test func testLoading() async throws {
   guard let url = findFile("token_bytes", "pt") else {
     logPrint("Couldn't find token_bytes.pt")
@@ -18,13 +20,14 @@ enum TestError: Error {
     
   let val = await Task { @PTReaderActor in
     let file = try PTFile(fileName: url)
-    return file.parsedData
+    return file.parseData()
   }.result
   
   // TODO: Write #expect checks
   print(val)
 }
 
+/// Test using just unpickling functionality
 @Test func testUnpickling() async throws {
   guard let url = findFile("tokenizer", "pkl") else {
     print("Couldn't find tokenizer.pkl")
@@ -33,36 +36,50 @@ enum TestError: Error {
   
   let data = try! Data.init(contentsOf: url)
   
-  let outputVal = await Task { @PTReaderActor in
+  let outputVal = try await Task { @PTReaderActor in
     InstanceFactory.shared.addInstantiator(TiktokenEncodingInstantiator())
     let unpickler = Unpickler(inputData: data, persistentLoader: nil)
     return try unpickler.load()
-  }.result
+  }.value
   
-  // TODO: Write #expect checks
-  print(outputVal)
+  guard let outputVal,
+        let outputObject = outputVal.objectType(TiktokenEncoding.self),
+        outputVal.objectName == "TiktokenEncoding" else {
+    throw TestError.wrongOutputData
+  }
+  
+  #expect(outputObject.name == "rustbpe")
+  #expect(outputObject.mergeableRanks?.keys.count == 65527)
+  #expect(outputObject.specialTokens?.keys.count == 9)
 }
 
+/// Test reading a bigger model file
 @Test func testReadingBigPTFile() async throws {
   guard let url = findFile("model_000650", "pt") else {
     print("Couldn't find model_000650.pt")
     throw TestError.couldNotFindResource
   }
     
-  let val = await Task { @PTReaderActor in
+  let outputVal = try await Task { @PTReaderActor in
     let file = try PTFile(fileName: url)
-    return file.parsedData
-  }.result
+    return file.parseData()
+  }.value
   
-  guard case .success(let outputVal) = val, let outputVal, let unpickledDict = outputVal.dict else {
+  guard let outputVal, let unpickledDict = outputVal.dict else {
     throw TestError.wrongOutputData
   }
   
   var dict: [String: MLXArray] = [:]
+  var metadata: [AnyHashable: Any]?
   
   for (key, value) in unpickledDict {
     guard let keyStr = key as? String else {
       throw TestError.wrongOutputData
+    }
+    
+    guard keyStr != "_metadata" else {
+      metadata = (value as? UnpicklerValue)?.dict as? [AnyHashable: Any]
+      continue
     }
     
     guard let mlxArray = (value as? (MLXArray, String)), mlxArray.1 == "Tensor" else {
@@ -73,13 +90,5 @@ enum TestError: Error {
   }
   
   #expect(dict.keys.count == 122)
-  
-  print("Dictionary with \(dict.keys.count) keys:")
-  
-  for key in dict.keys.sorted() {
-    let data = dict[key]!
-    print("  \(key): Tensor(shape=\(data.shape), dtype=\(data.dtype))")    
-  }
-
-  print(val)
+  #expect(metadata != nil)
 }

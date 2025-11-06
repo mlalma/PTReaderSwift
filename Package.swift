@@ -26,14 +26,14 @@ let package = Package(
       dependencies: [.product(name: "MLX", package: "mlx-swift"),
                      .product(name: "MLXNN", package: "mlx-swift"),
                      .product(name: "ZIPFoundation", package: "ZIPFoundation"),
-                     .product(name: "MLXUtilsLibrary", package: "MLXUtilsLibrary")],
-      resources: [
-       .copy("../../Resources/")
-      ]
+                     .product(name: "MLXUtilsLibrary", package: "MLXUtilsLibrary")]
     ),
     .testTarget(
       name: "PTReaderSwiftTests",
-      dependencies: ["PTReaderSwift"]
+      dependencies: ["PTReaderSwift"],
+      resources: [
+       .copy("../../Resources/")
+      ]
     ),
   ]
 )

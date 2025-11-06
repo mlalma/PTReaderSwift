@@ -41,7 +41,9 @@ final class InstanceFactory {
     } else if var dict = object.dict, let argDict = arguments.dict {
       for (key, value) in argDict {
         dict[key] = value
+        print("AAAAAAA KEY \(key)")
       }
+      return .dict(dict)
     }
     return object
   }
