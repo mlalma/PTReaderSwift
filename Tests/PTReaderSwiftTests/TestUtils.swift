@@ -23,5 +23,5 @@ func debugArchive(url: URL) {
 
 /// Finds test file from resources
 func findFile(_ fileName: String, _ fileExtension: String) -> URL? {
-  Bundle.module.url(forResource: fileName, withExtension: fileExtension,  subdirectory: "Resources")
+  Bundle.module.url(forResource: fileName, withExtension: fileExtension)
 }

@@ -31,9 +31,7 @@ let package = Package(
     .testTarget(
       name: "PTReaderSwiftTests",
       dependencies: ["PTReaderSwift"],
-      resources: [
-       .copy("../../Resources/")
-      ]
+      resources: [.process("Resources")]
     ),
   ]
 )
