@@ -1,6 +1,7 @@
 import Foundation
 import ZIPFoundation
 import MLXUtilsLibrary
+import PTReaderSwiftTestData
 @testable import PTReaderSwift
 
 /// Debug method to print the contents of .pt file for debugging
@@ -23,5 +24,5 @@ func debugArchive(url: URL) {
 
 /// Finds test file from resources
 func findFile(_ fileName: String, _ fileExtension: String) -> URL? {
-  Bundle.module.url(forResource: fileName, withExtension: fileExtension)
+    TestData.url(forResource: fileName, withExtension: fileExtension)  
 }
