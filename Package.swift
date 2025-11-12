@@ -19,7 +19,6 @@ let package = Package(
     .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.25.6"),
     .package(url: "https://github.com/weichsel/ZIPFoundation.git", .upToNextMajor(from: "0.9.0")),
     .package(url: "https://github.com/mlalma/MLXUtilsLibrary.git", from: "0.0.5"),
-    .package(url: "https://github.com/mlalma/PTReaderSwiftTestData.git", from: "0.0.2")
   ],
   targets: [
     .target(
@@ -31,8 +30,8 @@ let package = Package(
     ),
     .testTarget(
       name: "PTReaderSwiftTests",
-      dependencies: ["PTReaderSwift",
-                     .product(name: "PTReaderSwiftTestData", package: "PTReaderSwiftTestData")],
+      dependencies: ["PTReaderSwift"],
+      resources: [.process("Resources")]
     ),
   ]
 )
