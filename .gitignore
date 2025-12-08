@@ -63,5 +63,5 @@ fastlane/test_output
 
 /Tests/PTReaderSwiftTests/Resources
 
-.swiftpm/xcode/package.xcworkspace
+.swiftpm/xcode/package.xcworkspace/
 .DS_Store
