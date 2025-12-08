@@ -97,3 +97,23 @@ enum TestError: Error {
   #expect(dict.keys.count == 122)
   #expect(metadata != nil)
 }
+
+@Test func loadSmallModel() async throws {
+    guard let url = findFile("pytorch_model_2", "bin") else {
+        print("Couldn't find pytorch_model_2.bin")
+        throw TestError.couldNotFindResource
+    }
+        
+    let outputVal = try await Task { @PTReaderActor in
+      let file = try PTFile(fileName: url)
+      return file.parseData()
+    }.value
+    
+    if let outputVal, let outputDict = outputVal.dict {
+        for (key, value) in outputDict {
+            if let potentialArray = value as? (Any, String), potentialArray.1 == "Tensor", let mlxArray = potentialArray.0 as? MLXArray {
+                print("VAL: \(type(of: value))")
+            }            
+        }
+    }
+}
