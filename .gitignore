@@ -62,3 +62,6 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 /Tests/PTReaderSwiftTests/Resources
+
+.swiftpm
+.DS_Store
