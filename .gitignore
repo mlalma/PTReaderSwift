@@ -65,3 +65,6 @@ fastlane/test_output
 
 .swiftpm/xcode/package.xcworkspace/
 .DS_Store
+
+Package.resolved
+
